@@ -56,12 +56,12 @@ def normalize_reminder_time(reminder_time):
 
 def send_email(to_email, subject, body):
     """Sends an email reminder using SMTP."""
-    if not sender_email or sender_email == 'Your mail id' or not sender_password or sender_password == 'Your app password':
-        print("Warning: Email credentials are not configured. Logging email reminder simulation:")
-        print(f"  To: {to_email}\n  Subject: {subject}\n  Body: {body}\n")
-        return True  # Return True to mark as simulated success
+    if not sender_email or "gmail.com" not in sender_email:
+        print(f"CRITICAL: SMTP_EMAIL is not configured correctly. Current value: {sender_email}")
+        return False
+
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=15)
         server.starttls()
         server.login(sender_email, sender_password)
         msg = MIMEMultipart()
@@ -71,10 +71,10 @@ def send_email(to_email, subject, body):
         msg.attach(MIMEText(body, 'plain'))
         server.sendmail(sender_email, to_email, msg.as_string())
         server.quit()
-        print(f"Reminder email successfully sent to {to_email}")
+        print(f"SUCCESS: Email sent to {to_email}")
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"SMTP ERROR: Could not send email to {to_email}. Error: {e}")
         return False
 def check_and_send_reminders():
     """Background loop checking SQLite database for due reminders."""
