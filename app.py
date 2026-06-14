@@ -81,7 +81,7 @@ def check_and_send_reminders():
     init_db()
     while True:
         try:
-            now = datetime.now()
+            now = datetime.now() # On Render, this is UTC time
             conn = sqlite3.connect('tasks.db')
             cursor = conn.cursor()
 
@@ -102,11 +102,11 @@ def check_and_send_reminders():
                     continue
 
                 if reminder_dt <= now:
-                    print(f"Processing reminder for task '{title}' to {email} scheduled at {reminder_time}")
+                    print(f"[{datetime.now()}] Sending reminder: {title} to {email}")
                     success = send_email(
                         email,
                         "Task Reminder",
-                        f"Reminder: It's time to do your task: {title}\nScheduled time: {reminder_time}"
+                        f"Reminder: It's time for: {title}\nScheduled (UTC): {reminder_time}"
                     )
                     if success:
                         cursor.execute('UPDATE tasks SET reminder_sent = 1 WHERE id = ?', (task_id,))
@@ -115,6 +115,11 @@ def check_and_send_reminders():
         except Exception as e:
             print(f"Error in background scheduler: {e}")
         time.sleep(10)  # Check every 10 seconds
+
+# Initialize Database and Background Thread for Production (Gunicorn)
+init_db()
+threading.Thread(target=check_and_send_reminders, daemon=True).start()
+
 # Flask API Routes
 @app.route('/')
 def index():
@@ -219,11 +224,5 @@ def delete_task(task_id):
     
     return jsonify({'success': True})
 if __name__ == '__main__':
-    # Initialize the database
-    init_db()
-    
-    # Start background scheduler thread
-    threading.Thread(target=check_and_send_reminders, daemon=True).start()
-    
     # Run the Flask server
     app.run(host='0.0.0.0', port=5000, debug=True)
