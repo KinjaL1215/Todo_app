@@ -81,7 +81,7 @@ def check_and_send_reminders():
     init_db()
     while True:
         try:
-            now = datetime.now() # On Render, this is UTC time
+            now = datetime.utcnow() 
             conn = sqlite3.connect('tasks.db')
             cursor = conn.cursor()
 

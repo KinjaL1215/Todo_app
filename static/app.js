@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const formatReminderDisplay = (value) => {
         if (!value) return '';
-        const normalized = value.trim().replace(' ', 'T');
+        const normalized = value.trim().replace(' ', 'T') + 'Z';
         const reminderDate = new Date(normalized);
         if (Number.isNaN(reminderDate.getTime())) return value;
         return reminderDate.toLocaleString([], {
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const getReminderDiffLabel = (value) => {
         if (!value) return '';
-        const normalized = value.trim().replace(' ', 'T');
+        const normalized = value.trim().replace(' ', 'T') + 'Z';
         const reminderDate = new Date(normalized);
         if (Number.isNaN(reminderDate.getTime())) return '';
 
