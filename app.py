@@ -3,7 +3,7 @@ import sqlite3
 import smtplib
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Flask, render_template, request, jsonify, redirect, url_for
@@ -16,12 +16,14 @@ sender_email = os.environ.get('SMTP_EMAIL', 'Your mail id')
 sender_password = os.environ.get('SMTP_PASSWORD', 'Your app password')
 smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 smtp_port = int(os.environ.get('SMTP_PORT', 587))
+
 def init_db():
     """Initializes the SQLite database table if it doesn't exist."""
-    conn = sqlite3.connect('tasks.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tasks (
+    try:
+        conn = sqlite3.connect('tasks.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             email TEXT,
@@ -30,9 +32,12 @@ def init_db():
             reminder_sent INTEGER DEFAULT 0,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP
         )
-    ''')
-    conn.commit()
-    conn.close()
+        ''')
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"FAILED TO CONNECT TO DATABASE: {e}")
 
 def normalize_reminder_time(reminder_time):
     """Normalize reminder time to YYYY-MM-DD HH:MM format."""
@@ -78,16 +83,15 @@ def send_email(to_email, subject, body):
         return False
 def check_and_send_reminders():
     """Background loop checking SQLite database for due reminders."""
-    init_db()
     while True:
         try:
-            now = datetime.utcnow() 
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             conn = sqlite3.connect('tasks.db')
             cursor = conn.cursor()
 
             cursor.execute('''
                 SELECT id, title, email, reminder_time FROM tasks
-                WHERE completed = 0 AND reminder_sent = 0 AND reminder_time IS NOT NULL AND reminder_time != ""
+                WHERE completed = 0 AND reminder_sent = 0 AND reminder_time IS NOT NULL AND reminder_time != ''
             ''')
             rows = cursor.fetchall()
 
@@ -102,11 +106,15 @@ def check_and_send_reminders():
                     continue
 
                 if reminder_dt <= now:
-                    print(f"DEBUG: Triggering reminder for '{title}'. Scheduled(UTC): {reminder_time}, Server(UTC): {now.strftime('%Y-%m-%d %H:%M')}")
+                    # Convert UTC to IST for the email content
+                    ist_dt = reminder_dt + timedelta(hours=5, minutes=30)
+                    ist_time_str = ist_dt.strftime("%Y-%m-%d %I:%M %p")
+                    
+                    print(f"ATTEMPTING EMAIL: Task '{title}' for {email} (Server UTC: {now})")
                     success = send_email(
                         email,
                         "Task Reminder",
-                        f"Reminder: It's time for your task: {title}\nScheduled time: {reminder_time}"
+                        f"Hello!\n\nThis is a reminder for your task: {title}\nScheduled time: {ist_time_str} (IST)"
                     )
                     if success:
                         cursor.execute('UPDATE tasks SET reminder_sent = 1 WHERE id = ?', (task_id,))
@@ -150,8 +158,8 @@ def add_task():
         INSERT INTO tasks (title, email, reminder_time)
         VALUES (?, ?, ?)
     ''', (title, email, reminder_time))
-    conn.commit()
     task_id = cursor.lastrowid
+    conn.commit()
     conn.close()
     
     return jsonify({
