@@ -102,11 +102,11 @@ def check_and_send_reminders():
                     continue
 
                 if reminder_dt <= now:
-                    print(f"[{datetime.now()}] Sending reminder: {title} to {email}")
+                    print(f"DEBUG: Triggering reminder for '{title}'. Scheduled(UTC): {reminder_time}, Server(UTC): {now.strftime('%Y-%m-%d %H:%M')}")
                     success = send_email(
                         email,
                         "Task Reminder",
-                        f"Reminder: It's time for: {title}\nScheduled (UTC): {reminder_time}"
+                        f"Reminder: It's time for your task: {title}\nScheduled time: {reminder_time}"
                     )
                     if success:
                         cursor.execute('UPDATE tasks SET reminder_sent = 1 WHERE id = ?', (task_id,))

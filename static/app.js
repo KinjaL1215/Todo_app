@@ -42,14 +42,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const buildReminderDateTime = (dateValue, timeValue) => {
-        const trimmedDate = dateValue ? dateValue.trim() : '';
-        const trimmedTime = timeValue ? timeValue.trim() : '';
+        if (!dateValue && !timeValue) return '';
+        const datePart = dateValue || new Date().toISOString().split('T')[0];
+        const timePart = timeValue || '00:00';
 
-        if (!trimmedDate && !trimmedTime) return '';
-        const datePart = trimmedDate || new Date().toISOString().split('T')[0];
-        const timePart = trimmedTime || '00:00';
+        // Create a local date object from user input
+        const localDate = new Date(`${datePart}T${timePart}`);
+        if (isNaN(localDate.getTime())) return '';
 
-        return `${datePart}T${timePart}`;
+        // Convert to UTC ISO string for the server to match its clock
+        return localDate.toISOString().slice(0, 16).replace('T', ' ');
     };
 
     const formatReminderDisplay = (value) => {
